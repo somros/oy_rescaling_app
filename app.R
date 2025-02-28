@@ -8,9 +8,9 @@ library(rmarkdown)
 # The rescaling function
 rescale_fishing_mortality <- function(abc, cap, w_raw) {
   
-  # if(total_abc <= cap) {
-  #   return("")
-  # }
+  # abc <- c(100000, 80000, 60000, 40000)
+  # w_raw <- c(3,4,1,2)
+  # cap <- 20000000
   
   # 1. Calculate the first reduction factor r1. This calculates the initial reduction factor based on the ratio of the cap to the sum of all projected catches (i.e., how much in excess of the cap are we?).
   r1 <- cap / sum(abc)
@@ -67,6 +67,7 @@ rescale_fishing_mortality <- function(abc, cap, w_raw) {
   # 10. This last step is only executed if the previous steps have led to E>0. Redistribute E among the other stocks based on their original ABC (i.e., stocks that had larger ABC to absorb more of the excess):
   
   w_resid <- (abc - abc_4)/sum(abc - abc_4)
+  w_resid[is.nan(w_resid)] <- 0
   abc_final <- abc_4 + (w_resid * excess)
   
   # 11. Scalar on fishing mortality calculation:
@@ -127,7 +128,7 @@ ui <- fluidPage(
   sidebarLayout(
     sidebarPanel(
       # Action button
-      actionButton("run", "Calculate"),
+      actionButton("run", "Calculate", class = "btn-primary", style = "margin-bottom: 15px;"),
       
       # Cap input
       h4("Total ABC Cap"),
@@ -139,31 +140,36 @@ ui <- fluidPage(
       numericInput("abc2", "Cod ABC:", 80000, min = 0),
       numericInput("abc3", "Arrowtooth Flounder ABC:", 60000, min = 0),
       numericInput("abc4", "Pacific Ocean Perch ABC:", 40000, min = 0),
+      numericInput("abc5", "Shallow-water flatfish ABC:", 40000, min = 0),
       
       # Weight inputs
       h4("Weights (higher = less reduction)"),
       numericInput("w1", "Pollock Weight:", 3, min = 0),
       numericInput("w2", "Cod Weight:", 4, min = 0),
       numericInput("w3", "Arrowtooth Flounder Weight:", 1, min = 0),
-      numericInput("w4", "Pacific Ocean Perch Weight:", 2, min = 0)
+      numericInput("w4", "Pacific Ocean Perch Weight:", 2, min = 0),
+      numericInput("w5", "Shallow-water flatfish Weight:", 1, min = 0)
     ),
     
     mainPanel(
       tabsetPanel(
+        # Changed order - Visualization as first tab
+        tabPanel("Visualization",
+                 plotOutput("comparison_plot", height = "500px"),
+                 # Add reduction factor table below the plot
+                 h4("Rescaling by Species"),
+                 tableOutput("reduction_table")
+        ),
         tabPanel("Summary", 
                  h4("Original Values"),
                  verbatimTextOutput("original_summary"),
                  h4("New Values"),
                  verbatimTextOutput("new_summary")
         ),
-        tabPanel("Visualization",
-                 plotOutput("comparison_plot")
-        ),
         tabPanel("Detailed Results",
                  verbatimTextOutput("detailed_results")
         ),
         tabPanel("Method Documentation",
-                 # Using uiOutput to render the iframe on the server side
                  uiOutput("method_doc")
         )
       )
@@ -180,8 +186,8 @@ server <- function(input, output) {
   
   # Reactive calculation
   results <- eventReactive(input$run, {
-    abc <- c(input$abc1, input$abc2, input$abc3, input$abc4)
-    w_raw <- c(input$w1, input$w2, input$w3, input$w4)
+    abc <- c(input$abc1, input$abc2, input$abc3, input$abc4, input$abc5)
+    w_raw <- c(input$w1, input$w2, input$w3, input$w4, input$w5)
     
     rescale_fishing_mortality(abc, input$cap, w_raw)
   })
@@ -189,9 +195,9 @@ server <- function(input, output) {
   # Original summary output
   output$original_summary <- renderPrint({
     res <- results()
-    stocks <- c("Pollock", "Cod", "Arrowtooth Flounder", "Pacific Ocean Perch")
+    stocks <- c("Pollock", "Cod", "Arrowtooth Flounder", "Pacific Ocean Perch", "Shallow-water flatfish")
     cat("Original ABCs:\n")
-    for(i in 1:4) {
+    for(i in 1:5) {
       cat(stocks[i], ":", res$abc[i], "\n")
     }
     cat("\nTotal ABC:", sum(res$abc), "\n")
@@ -202,14 +208,14 @@ server <- function(input, output) {
   # New summary output
   output$new_summary <- renderPrint({
     res <- results()
-    stocks <- c("Pollock", "Cod", "Arrowtooth Flounder", "Pacific Ocean Perch")
+    stocks <- c("Pollock", "Cod", "Arrowtooth Flounder", "Pacific Ocean Perch", "Shallow-water flatfish")
     cat("Final ABCs:\n")
-    for(i in 1:4) {
+    for(i in 1:5) {
       cat(stocks[i], ":", res$abc_final[i], "\n")
     }
     cat("\nTotal New ABC:", res$total_abc_final, "\n")
     cat("\nF Rescaling Factors:\n")
-    for(i in 1:4) {
+    for(i in 1:5) {
       cat(stocks[i], ":", res$f_rescale[i], "\n")
     }
   })
@@ -217,10 +223,10 @@ server <- function(input, output) {
   # Detailed results
   output$detailed_results <- renderPrint({
     res <- results()
-    stocks <- c("Pollock", "Cod", "Arrowtooth Flounder", "Pacific Ocean Perch")
+    stocks <- c("Pollock", "Cod", "Arrowtooth Flounder", "Pacific Ocean Perch", "Shallow-water flatfish")
     
     cat("Step-by-Step Results:\n\n")
-    for(i in 1:4) {
+    for(i in 1:5) {
       cat(stocks[i], ":\n")
       cat("Original ABC:", res$abc[i], "\n")
       cat("Weight:", res$weights[i], "\n")
@@ -240,29 +246,82 @@ server <- function(input, output) {
     cat("Final r2 adjustment:", res$r2, "\n")
   })
   
-  # Visualization
+  # Reduction factors table
+  output$reduction_table <- renderTable({
+    res <- results()
+    stocks <- c("Pollock", "Cod", "Arrowtooth Flounder", "Pacific Ocean Perch", "Shallow-water flatfish")
+    
+    data.frame(
+      Species = stocks,
+      Original_ABC = res$abc,
+      Final_ABC = res$abc_final,
+      Reduction_Factor = res$f_rescale,  # No rounding here, will control in digits parameter
+      Weight = res$weights
+    )
+  }, align = "lrrrr", digits = c(0, 0, 0, 3, 0), width = "100%", striped = TRUE, hover = TRUE, bordered = TRUE)
+  
+  # Visualization with larger fonts and rescaling factors
   output$comparison_plot <- renderPlot({
     res <- results()
-    stocks <- c("Pollock", "Cod", "Arrowtooth Flounder", "Pacific Ocean Perch")
+    stocks <- c("Pollock", "Cod", "Arrowtooth Flounder", "Pacific Ocean Perch", "Shallow-water flatfish")
     
     # Create data frame for plotting
     plot_data <- data.frame(
       Species = rep(stocks, 2),
-      Type = rep(c("Original", "New"), each = 4),
+      Type = rep(c("Original", "New"), each = 5),
       ABC = c(res$abc, res$abc_final)
     )
     
     # Make species a factor with specified order
     plot_data$Species <- factor(plot_data$Species, levels = stocks)
     
-    ggplot(plot_data, aes(x = Species, y = ABC, fill = Type)) +
-      geom_bar(stat = "identity", position = "dodge") +
-      geom_hline(yintercept = input$cap, linetype = "dashed", color = "red") +
-      labs(title = "ABC Comparison",
-           subtitle = paste("Cap =", input$cap),
-           y = "ABC Value") +
+    # Colorblind-friendly palette (blue and orange)
+    cb_palette <- c("#0072B2", "#E69F00")
+    
+    # Create the plot with larger fonts
+    p <- ggplot(plot_data, aes(x = Species, y = ABC, fill = Type)) +
+      geom_col(position = position_dodge(width = 0.7), width = 0.7) +
+      geom_hline(yintercept = input$cap, linetype = "dashed", color = "red", linewidth = 1.2) +
+      labs(
+        title = "ABC Comparison",
+        subtitle = paste("Cap =", input$cap),
+        y = "ABC Value",
+        fill = "ABC Type"
+      ) +
+      scale_fill_manual(values = cb_palette) +
       theme_minimal() +
-      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+      theme(
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 14),
+        axis.text.y = element_text(size = 14),
+        axis.title = element_text(size = 16, face = "bold"),
+        plot.title = element_text(size = 20, face = "bold"),
+        plot.subtitle = element_text(size = 16),
+        legend.title = element_text(size = 14, face = "bold"),
+        legend.text = element_text(size = 12),
+        legend.position = "top"
+      )
+    
+    # Generate data for direct labeling (manually calculating positions)
+    # The dodge width is 0.7, so the "Original" bars are at position - 0.7/2
+    label_data <- data.frame(
+      x = 1:5 - 0.35,  # This positions labels over the "Original" bars
+      y = res$abc * 1.05,  # Position slightly above the bars
+      label = sprintf("Factor: %.2f", res$f_rescale)
+    )
+    
+    # Add labels directly using annotation (safer than geom_text)
+    # for (i in 1:nrow(label_data)) {
+    #   p <- p + annotate(
+    #     "text",
+    #     x = label_data$x[i],
+    #     y = label_data$y[i],
+    #     label = label_data$label[i],
+    #     size = 5,
+    #     fontface = "bold"
+    #   )
+    # }
+    
+    p
   })
 }
 
