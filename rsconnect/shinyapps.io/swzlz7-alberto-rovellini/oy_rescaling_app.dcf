@@ -1,0 +1,12 @@
+name: oy_rescaling_app
+title:
+username: swzlz7-alberto-rovellini
+account: swzlz7-alberto-rovellini
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 13703566
+bundleId: 9868544
+url: https://swzlz7-alberto-rovellini.shinyapps.io/oy_rescaling_app/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
