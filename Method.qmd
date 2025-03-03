@@ -17,6 +17,8 @@ To meet all conditions above at once, the rescaling is done over several steps w
 
 The vector of weights $w$ is used in two ways in this approach. First, in a power function to apply the first rescaling. Then, standardized relative to $max(w)$ for further rescaling.
 
+A Shiny App illustrating this approach is available [here](https://swzlz7-alberto-rovellini.shinyapps.io/oy_rescaling_app/).
+
 Here are the steps:
 
 1.  Calculate the first reduction factor $r_1$: $$r_1 = \frac{OY_{cap}}{\sum_{i=1}^n ABC_i}$$
