@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Alberto Rovellini">
-<meta name="dcterms.date" content="2025-02-27">
+<meta name="dcterms.date" content="2025-03-04">
 
 <title>Rescaling groundfish projected catch to meet the GOA OY cap</title>
 <style>
@@ -93,7 +93,7 @@ window.Quarto = {
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">February 27, 2025</p>
+      <p class="date">March 4, 2025</p>
     </div>
   </div>
   
@@ -105,61 +105,44 @@ window.Quarto = {
 </header>
 
 
-<p>This approach takes a vector of projected catch <span class="math inline">\(ABC\)</span> for a set of stocks and applies a series of rescaling steps to transform it into a vector <span class="math inline">\(ABC_{final}\)</span> such that, given an ecosystem cap on total harvest <span class="math inline">\(OY_{cap}\)</span>, the following conditions are satisfied for each stock <span class="math inline">\(i\)</span>:</p>
+<p>This approach takes a vector of projected catch <span class="math inline">\(ABC\)</span> for a set of stocks and applies an optimization-based rescaling to transform it into a vector <span class="math inline">\(ABC_{final}\)</span> such that, given an ecosystem cap on total harvest <span class="math inline">\(OY_{cap}\)</span>, the following conditions are satisfied for each stock <span class="math inline">\(i\)</span>:</p>
 <ol type="1">
 <li><span class="math inline">\(\sum_{i=1}^n ABC_{final,i}\leq OY_{cap}\)</span></li>
-<li><span class="math inline">\(ABC_{final,i} = min(ABC_i, ABC_{final,i})\)</span></li>
+<li><span class="math inline">\(ABC_{final,i} \leq ABC_i\)</span></li>
 <li>If <span class="math inline">\(ABC_i &gt; 0\)</span>, then <span class="math inline">\(ABC_{final,i} &gt; 0\)</span></li>
 </ol>
-<p>The input needed for the rescaling is a set of weights <span class="math inline">\(w\)</span>. The approach laid out here assumes that high-value stocks will have higher <span class="math inline">\(w_i\)</span> and will undergo lower rescaling. Previous versions of this approach calculated the <span class="math inline">\(ABC\)</span> in excess of the OY cap and assigned it as deductions to <span class="math inline">\(ABC_i\)</span> each stock <span class="math inline">\(i\)</span> based on the weights. However, that approach often led to zero-catch for some of the low-value stocks, which is undesirable due to by-catch considerations. The approach presented here strives to work as much as possible in proportional space instead of with raw catch.</p>
-<p>To meet all conditions above at once, the rescaling is done over several steps where a series of reduction factors and stock-specific scaling factors are computed. Reduction factors relate the aggregate <span class="math inline">\(ABC\)</span> to the ecosystem cap. Stock-specific scaling factors rescale <span class="math inline">\(ABC_i\)</span> for each stock <span class="math inline">\(i\)</span> using the weights.</p>
-<p>The vector of weights <span class="math inline">\(w\)</span> is used in two ways in this approach. First, in a power function to apply the first rescaling. Then, standardized relative to <span class="math inline">\(max(w)\)</span> for further rescaling.</p>
+<p>The input needed for the rescaling is a set of weights <span class="math inline">\(w\)</span>. The approach laid out here assumes that high-value stocks will have higher <span class="math inline">\(w_i\)</span> and will undergo lower rescaling. To satisfy condition 3 above, we need <span class="math inline">\(w_ i&gt;0\)</span> for all stocks.</p>
 <p>A Shiny App illustrating this approach is available <a href="https://swzlz7-alberto-rovellini.shinyapps.io/oy_rescaling_app/">here</a>.</p>
-<p>Here are the steps:</p>
+<section id="formulation" class="level2">
+<h2 class="anchored" data-anchor-id="formulation">Formulation</h2>
+<p>Our goal is to find a single multiplier <span class="math inline">\(m\)</span> that, when applied with the weights <span class="math inline">\(w\)</span>, produces rescaled ABCs that sum exactly to the cap. The approach first checks if rescaling is needed (i.e., if <span class="math inline">\(\sum_{i=1}^n ABC_i &gt; OY_{cap}\)</span>). If not, no rescaling is performed and <span class="math inline">\(ABC_{final,i} = ABC_i\)</span> for all stocks.</p>
+<p>If rescaling is needed, we calculate the reduction ratio <span class="math inline">\(r\)</span>:</p>
+<p><span class="math display">\[r = \frac{OY_{cap}}{\sum_{i=1}^n ABC_i}\]</span></p>
+<p>This ratio tells us how much the total catch exceeds the cap.</p>
+<p>We then search for a multiplier <span class="math inline">\(m\)</span> that, when used in the following rescaling equation, produces rescaled ABCs that sum to the cap:</p>
+<p><span class="math display">\[ABC_{final,i} = ABC_i \times r^{(1/(w_i \times m))}\]</span></p>
+<p>Stocks with higher weights undergo less reduction because the exponent <span class="math inline">\(1/(w_i \times m)\)</span> becomes smaller as <span class="math inline">\(w_i\)</span> increases. This preserves catch for high-value stocks while reducing catch more substantially for low-value stocks.</p>
+</section>
+<section id="finding-the-multiplier" class="level2">
+<h2 class="anchored" data-anchor-id="finding-the-multiplier">Finding the multiplier</h2>
+<p>To find the optimal multiplier <span class="math inline">\(m\)</span>, we formulate an objective function that measures how close the sum of rescaled ABCs is to the cap:</p>
+<p><span class="math display">\[f(m) = \left(OY_{cap} - \sum_{i=1}^n ABC_i \times r^{(1/(w_i \times m))}\right)^2\]</span></p>
+<p>The goal is to find the value of <span class="math inline">\(m\)</span> that minimizes this. We locate the optimal multiplier by means of numerical optimization using the bisection method (this assumes monotonic <span class="math inline">\(f(m)\)</span>). This is probably simplistic but it’s also something that we can easily code into Atlantis without more complex optimization approaches (I’d like to avoid having to call additional C libraries as that may break Beth’s code, also it seems like we should not need more complex optimization).</p>
+<section id="the-bisection-method" class="level3">
+<h3 class="anchored" data-anchor-id="the-bisection-method">The Bisection Method</h3>
+<p>The bisection method works by repeatedly dividing an interval in half and determining which half contains the minimum. The steps are:</p>
 <ol type="1">
-<li>Calculate the first reduction factor <span class="math inline">\(r_1\)</span>: <span class="math display">\[r_1 = \frac{OY_{cap}}{\sum_{i=1}^n ABC_i}\]</span></li>
+<li>Start with an interval <span class="math inline">\([a, b]\)</span> where the minimum of <span class="math inline">\(f(m)\)</span> is believed to exist (here arbitrarily using <span class="math inline">\([0,2]\)</span> but should / could explore a different range)</li>
+<li>Calculate the midpoint <span class="math inline">\(c = (a + b)/2\)</span></li>
+<li>Estimate the derivative of <span class="math inline">\(f(m)\)</span> at <span class="math inline">\(c\)</span> using the central difference approximation: <span class="math display">\[f'(c) \approx \frac{f(c + h) - f(c - h)}{2h}\]</span> where <span class="math inline">\(h\)</span> is a small step size</li>
+<li>If <span class="math inline">\(f'(c) \approx 0\)</span> (within a tolerance), we’ve found the minimum</li>
+<li>If <span class="math inline">\(f'(c) &gt; 0\)</span>, the minimum is in <span class="math inline">\([a, c]\)</span>, so set <span class="math inline">\(b = c\)</span></li>
+<li>If <span class="math inline">\(f'(c) &lt; 0\)</span>, the minimum is in <span class="math inline">\([c, b]\)</span>, so set <span class="math inline">\(a = c\)</span></li>
+<li>Repeat steps 2-6 until the interval is sufficiently small (tolerance set to 1e-7 for now, and 100 iterations as it should be a simple function)</li>
 </ol>
-<p>This calculates the initial reduction factor based on the ratio of the cap to the sum of all projected catches (i.e., how much in excess of the cap are we?).</p>
-<ol start="2" type="1">
-<li>Calculate the first scaling factor <span class="math inline">\(s_1\)</span>:</li>
-</ol>
-<p><span class="math display">\[
-s_{1,i} = r_1^{(1/w_i)}
-\]</span></p>
-<p>This scalar will preserve the catch values for high-value stocks by applying a weighted power transformation.</p>
-<ol start="3" type="1">
-<li>Perform the first catch adjustment: <span class="math display">\[ABC_{1,i} = ABC_i \times s_{1,i}\]</span></li>
-</ol>
-<p>At this point we may still be in excess of the OY cap.</p>
-<ol start="4" type="1">
-<li>Calculate the second reduction factor <span class="math inline">\(r_2\)</span>: <span class="math display">\[r_2 = \frac{OY_{cap}}{\sum_{i=1}^n ABC_{1,i}}\]</span></li>
-</ol>
-<p>This determines how much further adjustment is still needed after the first adjustment.</p>
-<ol start="5" type="1">
-<li>Calculate the second scaling factor <span class="math inline">\(s_2\)</span>. First, scale the weights to 0-1 range: <span class="math display">\[w_{n,i} = \frac{w_i}{\max(w_1, w_2, \ldots, w_n)}\]</span></li>
-</ol>
-<p>This standardizes the weights relative to the maximum weight value. It is done so that the most valuable stock has a weight of 1. Then compute <span class="math inline">\(s_2\)</span>: <span class="math display">\[s_{2,i} = w_{n,i} + (1 - w_{n,i}) \times r_2\]</span></p>
-<p>This creates a stock-specific scaling factor as a weighted combination of 1 and the second reduction factor <span class="math inline">\(r_2\)</span>. For the highest-value stock, this ensures minimal rescaling (though we still need to comply with <span class="math inline">\(r_2\)</span>).</p>
-<ol start="6" type="1">
-<li>Perform the second catch adjustment: <span class="math display">\[ABC_{2,i} = ABC_{1,i} \times s_{2,i}\]</span></li>
-</ol>
-<p>Note that <span class="math inline">\(ABC_2\)</span> is an intermediate quantity used to compute the third and final reduction factor.</p>
-<ol start="7" type="1">
-<li>Calculate the third reduction factor <span class="math inline">\(r_3\)</span> and scaling factor <span class="math inline">\(s_3\)</span>: <span class="math display">\[r_3 = \frac{OY_{cap}}{\sum_{i=1}^n ABC_{2,i}}\]</span> <span class="math display">\[s_{3,i} = s_{2,i} \times r_3\]</span></li>
-</ol>
-<p>This will ensure that the total catch remains under the cap after the previous adjustments by performing stock-specific adjustments.</p>
-<ol start="8" type="1">
-<li>Perform the third catch adjustment: <span class="math display">\[ABC_{3,i} = ABC_{1,i} \times s_{3,i}\]</span></li>
-<li>At this point the aggregate <span class="math inline">\(ABC_3\)</span> should be at the cap. However, one remaining issue for some combinations of <span class="math inline">\(w\)</span> (and depending on stock status) is that the previous steps may have caused some upscaling of the original <span class="math inline">\(ABC\)</span> values. This would be a violation of the single-species catch allocation step that precedes the OY rescaling (particularly problematic for stocks that are managed with an HCR). This step constrains the projected catch to not exceed original <span class="math inline">\(ABC\)</span>. We also need to keep track of any leftover unallocated catch <span class="math inline">\(E\)</span> that may results from deducting the <span class="math inline">\(ABC\)</span> in excess in this step:</li>
-</ol>
-<p><span class="math display">\[E = \sum_{i=1}^n (ABC_{3,i} - ABC_i) \text{ where } ABC_{3,i} &gt; ABC_i\]</span></p>
-<p><span class="math display">\[ABC_{4,i} = \min(ABC_{3,i}, ABC_i)\]</span></p>
-<p>At this point, if <span class="math inline">\(E = 0\)</span>, then <span class="math inline">\(ABC_{final} = ABC_4\)</span>.</p>
-<ol start="10" type="1">
-<li><strong>This last step is only executed if the previous steps have led to</strong> <span class="math inline">\(E&gt;0\)</span><strong>.</strong> Redistribute <span class="math inline">\(E\)</span> among the other stocks based on their original <span class="math inline">\(ABC\)</span> (i.e., stocks that had larger <span class="math inline">\(ABC\)</span> to absorb more of the excess): <span class="math display">\[w_{resid,i} = \frac{ABC_i - ABC_{4,i}}{\sum_{j=1}^n (ABC_j - ABC_{4,j})}\]</span></li>
-</ol>
-<p>Note that for stocks where <span class="math inline">\(ABC_{4,i} = ABC_i\)</span> due to step 9, <span class="math inline">\(w_{resid,i}=0\)</span>. This is to avoid reassigning any part of excess to stocks that are already meeting their single-species catch allocation.</p>
-<p><span class="math display">\[ABC_{final,i} = ABC_{4,i} + w_{resid,i} \times E\]</span></p>
+<p>This method converges to the optimal multiplier <span class="math inline">\(m\)</span> that balances the rescaling across stocks.</p>
+</section>
+</section>
 
 </main>
 <!-- /main column -->

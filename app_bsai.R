@@ -5,7 +5,7 @@ library(dplyr)
 library(htmltools)
 library(rmarkdown)
 
-# Simplified rescaling function using bisection method
+# Simplified rescaling function using bisection method from app.R
 rescale_fishing_mortality <- function(abc, cap, w_raw) {
   # Check if rescaling is needed (only rescale if sum(abc) > cap)
   if (sum(abc) <= cap) {
@@ -68,7 +68,7 @@ rescale_fishing_mortality <- function(abc, cap, w_raw) {
   }
   
   # Find the optimal mult value using bisection method
-  optimal_mult <- bisection_min(0, 2, fn)
+  optimal_mult <- bisection_min(0, 5, fn)
   
   # Calculate the rescaled ABC values using the optimal mult
   r <- cap/sum(abc)
@@ -117,7 +117,7 @@ read_html_file <- function() {
   )
 }
 
-# Modified UI Definition with sliders that have input boxes
+# Modified UI Definition with all 9 species from app_bsai.R
 ui <- fluidPage(
   titlePanel("Multi-Species ABC Rescaling Tool"),
   
@@ -146,21 +146,21 @@ ui <- fluidPage(
         }
       ")),
       
-      # Cap input with slider and input box
+      # Cap input with slider and input box - set to 2 million
       h4("Optimum Yield Cap"),
       div(class = "slider-input-container",
           div(class = "slider-container",
               div(class = "input-label", "Cap Value:"),
               sliderInput("cap_slider", NULL, 
-                          min = 0, max = 500000, value = 200000, 
-                          step = 1000, ticks = TRUE, width = "100%")
+                          min = 0, max = 3000000, value = 2000000, 
+                          step = 10000, ticks = TRUE, width = "100%")
           ),
           div(class = "numeric-input-container",
-              numericInput("cap", NULL, value = 200000, min = 0, max = 500000)
+              numericInput("cap", NULL, value = 2000000, min = 0, max = 3000000)
           )
       ),
       
-      # ABC inputs with sliders and input boxes
+      # ABC inputs with sliders and input boxes - all 9 species
       h4("ABC Values"),
       
       # Pollock
@@ -168,24 +168,24 @@ ui <- fluidPage(
           div(class = "slider-container",
               div(class = "input-label", "Pollock:"),
               sliderInput("abc1_slider", NULL, 
-                          min = 0, max = 200000, value = 100000, 
+                          min = 0, max = 3000000, value = 2355654, 
                           step = 1000, ticks = TRUE, width = "100%")
           ),
           div(class = "numeric-input-container",
-              numericInput("abc1", NULL, value = 100000, min = 0, max = 200000)
+              numericInput("abc1", NULL, value = 2355654, min = 0, max = 3000000)
           )
       ),
       
-      # Cod
+      # Pacific cod
       div(class = "slider-input-container",
           div(class = "slider-container",
-              div(class = "input-label", "Cod:"),
+              div(class = "input-label", "Pacific cod:"),
               sliderInput("abc2_slider", NULL, 
-                          min = 0, max = 200000, value = 80000, 
+                          min = 0, max = 500000, value = 180383, 
                           step = 1000, ticks = TRUE, width = "100%")
           ),
           div(class = "numeric-input-container",
-              numericInput("abc2", NULL, value = 80000, min = 0, max = 200000)
+              numericInput("abc2", NULL, value = 180383, min = 0, max = 500000)
           )
       ),
       
@@ -194,11 +194,11 @@ ui <- fluidPage(
           div(class = "slider-container",
               div(class = "input-label", "Arrowtooth Flounder:"),
               sliderInput("abc3_slider", NULL, 
-                          min = 0, max = 200000, value = 60000, 
+                          min = 0, max = 200000, value = 87690, 
                           step = 1000, ticks = TRUE, width = "100%")
           ),
           div(class = "numeric-input-container",
-              numericInput("abc3", NULL, value = 60000, min = 0, max = 200000)
+              numericInput("abc3", NULL, value = 87690, min = 0, max = 200000)
           )
       ),
       
@@ -207,28 +207,80 @@ ui <- fluidPage(
           div(class = "slider-container",
               div(class = "input-label", "Pacific Ocean Perch:"),
               sliderInput("abc4_slider", NULL, 
-                          min = 0, max = 200000, value = 40000, 
+                          min = 0, max = 200000, value = 41096, 
                           step = 1000, ticks = TRUE, width = "100%")
           ),
           div(class = "numeric-input-container",
-              numericInput("abc4", NULL, value = 40000, min = 0, max = 200000)
+              numericInput("abc4", NULL, value = 41096, min = 0, max = 200000)
           )
       ),
       
-      # Shallow-water flatfish
+      # Atka Mackerel
       div(class = "slider-input-container",
           div(class = "slider-container",
-              div(class = "input-label", "Shallow-water flatfish:"),
+              div(class = "input-label", "Atka Mackerel:"),
               sliderInput("abc5_slider", NULL, 
-                          min = 0, max = 200000, value = 40000, 
+                          min = 0, max = 200000, value = 95358, 
                           step = 1000, ticks = TRUE, width = "100%")
           ),
           div(class = "numeric-input-container",
-              numericInput("abc5", NULL, value = 40000, min = 0, max = 200000)
+              numericInput("abc5", NULL, value = 95358, min = 0, max = 200000)
           )
       ),
       
-      # Weight inputs
+      # Flathead Sole
+      div(class = "slider-input-container",
+          div(class = "slider-container",
+              div(class = "input-label", "Flathead Sole:"),
+              sliderInput("abc6_slider", NULL, 
+                          min = 0, max = 200000, value = 67289, 
+                          step = 1000, ticks = TRUE, width = "100%")
+          ),
+          div(class = "numeric-input-container",
+              numericInput("abc6", NULL, value = 67289, min = 0, max = 200000)
+          )
+      ),
+      
+      # Rock Sole
+      div(class = "slider-input-container",
+          div(class = "slider-container",
+              div(class = "input-label", "Rock Sole:"),
+              sliderInput("abc7_slider", NULL, 
+                          min = 0, max = 200000, value = 122091, 
+                          step = 1000, ticks = TRUE, width = "100%")
+          ),
+          div(class = "numeric-input-container",
+              numericInput("abc7", NULL, value = 122091, min = 0, max = 200000)
+          )
+      ),
+      
+      # Sablefish
+      div(class = "slider-input-container",
+          div(class = "slider-container",
+              div(class = "input-label", "Sablefish:"),
+              sliderInput("abc8_slider", NULL, 
+                          min = 0, max = 100000, value = 24550, 
+                          step = 1000, ticks = TRUE, width = "100%")
+          ),
+          div(class = "numeric-input-container",
+              numericInput("abc8", NULL, value = 24550, min = 0, max = 100000)
+          )
+      ),
+      
+      # Yellowfin Sole
+      div(class = "slider-input-container",
+          div(class = "slider-container",
+              div(class = "input-label", "Yellowfin Sole:"),
+              sliderInput("abc9_slider", NULL, 
+                          min = 0, max = 500000, value = 265913, 
+                          step = 1000, ticks = TRUE, width = "100%")
+          ),
+          div(class = "numeric-input-container",
+              numericInput("abc9", NULL, value = 265913, min = 0, max = 500000)
+          )
+      ),
+      
+      # Weight inputs - all set to 1
       h4("Weights (higher = less reduction)"),
       
       # Pollock Weight
@@ -236,24 +288,24 @@ ui <- fluidPage(
           div(class = "slider-container",
               div(class = "input-label", "Pollock:"),
               sliderInput("w1_slider", NULL, 
-                          min = 0, max = 10, value = 4, 
+                          min = 0, max = 10, value = 1, 
                           step = 0.1, ticks = TRUE, width = "100%")
           ),
           div(class = "numeric-input-container",
-              numericInput("w1", NULL, value = 4, min = 0, max = 10, step = 0.1)
+              numericInput("w1", NULL, value = 1, min = 0, max = 10, step = 0.1)
           )
       ),
       
-      # Cod Weight
+      # Pacific cod Weight
       div(class = "slider-input-container",
           div(class = "slider-container",
-              div(class = "input-label", "Cod:"),
+              div(class = "input-label", "Pacific cod:"),
               sliderInput("w2_slider", NULL, 
-                          min = 0, max = 10, value = 5, 
+                          min = 0, max = 10, value = 1, 
                           step = 0.1, ticks = TRUE, width = "100%")
           ),
           div(class = "numeric-input-container",
-              numericInput("w2", NULL, value = 5, min = 0, max = 10, step = 0.1)
+              numericInput("w2", NULL, value = 1, min = 0, max = 10, step = 0.1)
           )
       ),
       
@@ -275,24 +327,76 @@ ui <- fluidPage(
           div(class = "slider-container",
               div(class = "input-label", "Pacific Ocean Perch:"),
               sliderInput("w4_slider", NULL, 
-                          min = 0, max = 10, value = 3, 
+                          min = 0, max = 10, value = 1, 
                           step = 0.1, ticks = TRUE, width = "100%")
           ),
           div(class = "numeric-input-container",
-              numericInput("w4", NULL, value = 3, min = 0, max = 10, step = 0.1)
+              numericInput("w4", NULL, value = 1, min = 0, max = 10, step = 0.1)
           )
       ),
       
-      # Shallow-water flatfish Weight
+      # Atka Mackerel Weight
       div(class = "slider-input-container",
           div(class = "slider-container",
-              div(class = "input-label", "Shallow-water flatfish:"),
+              div(class = "input-label", "Atka Mackerel:"),
               sliderInput("w5_slider", NULL, 
-                          min = 0, max = 10, value = 2, 
+                          min = 0, max = 10, value = 1, 
                           step = 0.1, ticks = TRUE, width = "100%")
           ),
           div(class = "numeric-input-container",
-              numericInput("w5", NULL, value = 2, min = 0, max = 10, step = 0.1)
+              numericInput("w5", NULL, value = 1, min = 0, max = 10, step = 0.1)
+          )
+      ),
+      
+      # Flathead Sole Weight
+      div(class = "slider-input-container",
+          div(class = "slider-container",
+              div(class = "input-label", "Flathead Sole:"),
+              sliderInput("w6_slider", NULL, 
+                          min = 0, max = 10, value = 1, 
+                          step = 0.1, ticks = TRUE, width = "100%")
+          ),
+          div(class = "numeric-input-container",
+              numericInput("w6", NULL, value = 1, min = 0, max = 10, step = 0.1)
+          )
+      ),
+      
+      # Rock Sole Weight
+      div(class = "slider-input-container",
+          div(class = "slider-container",
+              div(class = "input-label", "Rock Sole:"),
+              sliderInput("w7_slider", NULL, 
+                          min = 0, max = 10, value = 1, 
+                          step = 0.1, ticks = TRUE, width = "100%")
+          ),
+          div(class = "numeric-input-container",
+              numericInput("w7", NULL, value = 1, min = 0, max = 10, step = 0.1)
+          )
+      ),
+      
+      # Sablefish Weight
+      div(class = "slider-input-container",
+          div(class = "slider-container",
+              div(class = "input-label", "Sablefish:"),
+              sliderInput("w8_slider", NULL, 
+                          min = 0, max = 10, value = 1, 
+                          step = 0.1, ticks = TRUE, width = "100%")
+          ),
+          div(class = "numeric-input-container",
+              numericInput("w8", NULL, value = 1, min = 0, max = 10, step = 0.1)
+          )
+      ),
+      
+      # Yellowfin Sole Weight
+      div(class = "slider-input-container",
+          div(class = "slider-container",
+              div(class = "input-label", "Yellowfin Sole:"),
+              sliderInput("w9_slider", NULL, 
+                          min = 0, max = 10, value = 1, 
+                          step = 0.1, ticks = TRUE, width = "100%")
+          ),
+          div(class = "numeric-input-container",
+              numericInput("w9", NULL, value = 1, min = 0, max = 10, step = 0.1)
           )
       )
     ),
@@ -333,7 +437,7 @@ server <- function(input, output, session) {
     updateSliderInput(session, "cap_slider", value = input$cap)
   }, ignoreInit = TRUE)
   
-  # Sync ABC slider and numeric inputs
+  # Sync ABC slider and numeric inputs for all 9 species
   # Pollock
   observe({
     updateNumericInput(session, "abc1", value = input$abc1_slider)
@@ -342,7 +446,7 @@ server <- function(input, output, session) {
     updateSliderInput(session, "abc1_slider", value = input$abc1)
   }, ignoreInit = TRUE)
   
-  # Cod
+  # Pacific cod
   observe({
     updateNumericInput(session, "abc2", value = input$abc2_slider)
   })
@@ -366,7 +470,7 @@ server <- function(input, output, session) {
     updateSliderInput(session, "abc4_slider", value = input$abc4)
   }, ignoreInit = TRUE)
   
-  # Shallow-water flatfish
+  # Atka Mackerel
   observe({
     updateNumericInput(session, "abc5", value = input$abc5_slider)
   })
@@ -374,7 +478,39 @@ server <- function(input, output, session) {
     updateSliderInput(session, "abc5_slider", value = input$abc5)
   }, ignoreInit = TRUE)
   
-  # Sync weight slider and numeric inputs
+  # Flathead Sole
+  observe({
+    updateNumericInput(session, "abc6", value = input$abc6_slider)
+  })
+  observeEvent(input$abc6, {
+    updateSliderInput(session, "abc6_slider", value = input$abc6)
+  }, ignoreInit = TRUE)
+  
+  # Rock Sole
+  observe({
+    updateNumericInput(session, "abc7", value = input$abc7_slider)
+  })
+  observeEvent(input$abc7, {
+    updateSliderInput(session, "abc7_slider", value = input$abc7)
+  }, ignoreInit = TRUE)
+  
+  # Sablefish
+  observe({
+    updateNumericInput(session, "abc8", value = input$abc8_slider)
+  })
+  observeEvent(input$abc8, {
+    updateSliderInput(session, "abc8_slider", value = input$abc8)
+  }, ignoreInit = TRUE)
+  
+  # Yellowfin Sole
+  observe({
+    updateNumericInput(session, "abc9", value = input$abc9_slider)
+  })
+  observeEvent(input$abc9, {
+    updateSliderInput(session, "abc9_slider", value = input$abc9)
+  }, ignoreInit = TRUE)
+  
+  # Sync weight slider and numeric inputs for all 9 species
   # Pollock Weight
   observe({
     updateNumericInput(session, "w1", value = input$w1_slider)
@@ -383,7 +519,7 @@ server <- function(input, output, session) {
     updateSliderInput(session, "w1_slider", value = input$w1)
   }, ignoreInit = TRUE)
   
-  # Cod Weight
+  # Pacific cod Weight
   observe({
     updateNumericInput(session, "w2", value = input$w2_slider)
   })
@@ -407,7 +543,7 @@ server <- function(input, output, session) {
     updateSliderInput(session, "w4_slider", value = input$w4)
   }, ignoreInit = TRUE)
   
-  # Shallow-water flatfish Weight
+  # Atka Mackerel Weight
   observe({
     updateNumericInput(session, "w5", value = input$w5_slider)
   })
@@ -415,15 +551,49 @@ server <- function(input, output, session) {
     updateSliderInput(session, "w5_slider", value = input$w5)
   }, ignoreInit = TRUE)
   
+  # Flathead Sole Weight
+  observe({
+    updateNumericInput(session, "w6", value = input$w6_slider)
+  })
+  observeEvent(input$w6, {
+    updateSliderInput(session, "w6_slider", value = input$w6)
+  }, ignoreInit = TRUE)
+  
+  # Rock Sole Weight
+  observe({
+    updateNumericInput(session, "w7", value = input$w7_slider)
+  })
+  observeEvent(input$w7, {
+    updateSliderInput(session, "w7_slider", value = input$w7)
+  }, ignoreInit = TRUE)
+  
+  # Sablefish Weight
+  observe({
+    updateNumericInput(session, "w8", value = input$w8_slider)
+  })
+  observeEvent(input$w8, {
+    updateSliderInput(session, "w8_slider", value = input$w8)
+  }, ignoreInit = TRUE)
+  
+  # Yellowfin Sole Weight
+  observe({
+    updateNumericInput(session, "w9", value = input$w9_slider)
+  })
+  observeEvent(input$w9, {
+    updateSliderInput(session, "w9_slider", value = input$w9)
+  }, ignoreInit = TRUE)
+  
   # Render the method documentation
   output$method_doc <- renderUI({
     read_html_file()
   })
   
-  # Reactive calculation
+  # Reactive calculation - updated to use the bisection method
   results <- eventReactive(input$run, {
-    abc <- c(input$abc1, input$abc2, input$abc3, input$abc4, input$abc5)
-    w_raw <- c(input$w1, input$w2, input$w3, input$w4, input$w5)
+    abc <- c(input$abc1, input$abc2, input$abc3, input$abc4, input$abc5,
+             input$abc6, input$abc7, input$abc8, input$abc9)
+    w_raw <- c(input$w1, input$w2, input$w3, input$w4, input$w5,
+               input$w6, input$w7, input$w8, input$w9)
     
     rescale_fishing_mortality(abc, input$cap, w_raw)
   })
@@ -431,9 +601,10 @@ server <- function(input, output, session) {
   # Original summary output
   output$original_summary <- renderPrint({
     res <- results()
-    stocks <- c("Pollock", "Cod", "Arrowtooth Flounder", "Pacific Ocean Perch", "Shallow-water flatfish")
+    stocks <- c("Pollock", "Pacific cod", "Arrowtooth Flounder", "Pacific Ocean Perch", "Atka Mackerel",
+                "Flathead Sole", "Rock Sole", "Sablefish", "Yellowfin Sole")
     cat("Original ABCs:\n")
-    for(i in 1:5) {
+    for(i in 1:9) {
       cat(stocks[i], ":", res$abc[i], "\n")
     }
     cat("\nTotal ABC:", sum(res$abc), "\n")
@@ -444,14 +615,15 @@ server <- function(input, output, session) {
   # New summary output
   output$new_summary <- renderPrint({
     res <- results()
-    stocks <- c("Pollock", "Cod", "Arrowtooth Flounder", "Pacific Ocean Perch", "Shallow-water flatfish")
+    stocks <- c("Pollock", "Pacific cod", "Arrowtooth Flounder", "Pacific Ocean Perch", "Atka Mackerel",
+                "Flathead Sole", "Rock Sole", "Sablefish", "Yellowfin Sole")
     cat("Final ABCs:\n")
-    for(i in 1:5) {
+    for(i in 1:9) {
       cat(stocks[i], ":", res$abc_final[i], "\n")
     }
     cat("\nTotal New ABC:", res$total_abc_final, "\n")
     cat("\nF Rescaling Factors:\n")
-    for(i in 1:5) {
+    for(i in 1:9) {
       cat(stocks[i], ":", res$f_rescale[i], "\n")
     }
   })
@@ -459,7 +631,8 @@ server <- function(input, output, session) {
   # Updated detailed results to match the simplified algorithm
   output$detailed_results <- renderPrint({
     res <- results()
-    stocks <- c("Pollock", "Cod", "Arrowtooth Flounder", "Pacific Ocean Perch", "Shallow-water flatfish")
+    stocks <- c("Pollock", "Pacific cod", "Arrowtooth Flounder", "Pacific Ocean Perch", "Atka Mackerel",
+                "Flathead Sole", "Rock Sole", "Sablefish", "Yellowfin Sole")
     
     cat("Bisection Method Results:\n\n")
     
@@ -470,7 +643,7 @@ server <- function(input, output, session) {
     }
     
     cat("Step-by-Step Results:\n\n")
-    for(i in 1:5) {
+    for(i in 1:9) {
       cat(stocks[i], ":\n")
       cat("Original ABC:", res$abc[i], "\n")
       cat("Weight:", res$weights[i], "\n")
@@ -496,7 +669,8 @@ server <- function(input, output, session) {
   # Reduction factors table
   output$reduction_table <- renderTable({
     res <- results()
-    stocks <- c("Pollock", "Cod", "Arrowtooth Flounder", "Pacific Ocean Perch", "Shallow-water flatfish")
+    stocks <- c("Pollock", "Pacific cod", "Arrowtooth Flounder", "Pacific Ocean Perch", "Atka Mackerel",
+                "Flathead Sole", "Rock Sole", "Sablefish", "Yellowfin Sole")
     
     data.frame(
       Species = stocks,
@@ -510,12 +684,13 @@ server <- function(input, output, session) {
   # Visualization with larger fonts and rescaling factors
   output$comparison_plot <- renderPlot({
     res <- results()
-    stocks <- c("Pollock", "Cod", "Arrowtooth Flounder", "Pacific Ocean Perch", "Shallow-water flatfish")
+    stocks <- c("Pollock", "Pacific cod", "Arrowtooth Flounder", "Pacific Ocean Perch", "Atka Mackerel",
+                "Flathead Sole", "Rock Sole", "Sablefish", "Yellowfin Sole")
     
     # Create data frame for plotting
     plot_data <- data.frame(
       Species = rep(stocks, 2),
-      Type = rep(c("Original", "New"), each = 5),
+      Type = rep(c("Original", "New"), each = 9),
       ABC = c(res$abc, res$abc_final)
     )
     
